@@ -344,25 +344,6 @@
     runningCount += hiLoValue(card.rank);
     return card;
   }
-  function calculateSumFromString(str){
-    if(!str) return 0;
-    const arr = str.split(',').map(s => s.trim());
-    let sum = 0, aceCount = 0;
-    for(let c of arr){
-      let rank = c.slice(0, c.length-1);
-      if(['J','Q','K'].includes(rank)) sum += 10;
-      else if(rank === 'A') {
-        sum += 11;
-        aceCount++;
-      }
-      else sum += parseInt(rank,10);
-    }
-    while(sum > 21 && aceCount > 0){
-      sum -= 10;
-      aceCount--;
-    }
-    return sum;
-  }
   let history = [];
   function saveRoundHistory(outcome){
     const roundData = {
@@ -388,8 +369,8 @@
       const div = document.createElement('div');
       div.style.marginBottom = '10px';
       div.innerHTML = `<b>Ronda ${h.ronda}:</b> Apuesta $${h.apuesta} — <i>${h.resultado}</i><br>
-                       Jugador: ${h.cartasJugador} (<b>${calculateSumFromString(h.cartasJugador)}</b>)<br>
-                       Banca: ${h.cartasBanca} (<b>${calculateSumFromString(h.cartasBanca)}</b>)<br>
+                       Jugador: ${h.cartasJugador} <br>
+                       Banca: ${h.cartasBanca} <br>
                        Conteo acumulado: ${h.conteoAlFinal} — Saldo: $${h.saldo}`;
       historyContent.appendChild(div);
     }
@@ -494,4 +475,29 @@
     updateDisplay(false);
     if(playerSum > 21) {
       revealDealerCards();
-      endGame('Te
+      endGame('Te pasaste de 21. Perdiste.');
+    }
+  }
+  function dealerTurn() {
+    revealDealerCards();
+    while(dealerSum < 17) {
+      dealerCards.push(drawCard());
+      dealerSum = calculateSum(dealerCards);
+      updateDisplay(true);
+    }
+    if(dealerSum > 21) {
+      endGame('La banca se pasó. ¡Ganaste!');
+      return;
+    }
+    if(dealerSum === playerSum) {
+      endGame('Empate.');
+    } else if(dealerSum > playerSum) {
+      endGame('Perdiste, la banca ganó.');
+    } else {
+      endGame('¡Ganaste la ronda!');
+    }
+  }
+
+  btnStart.addEventListener('click', () => startRound());
+  btnHit.addEventListener('click', () => playerHit());
+  btnStand.addEventListener('click',
