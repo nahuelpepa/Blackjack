@@ -500,4 +500,31 @@
 
   btnStart.addEventListener('click', () => startRound());
   btnHit.addEventListener('click', () => playerHit());
-  btnStand.addEventListener('click',
+  btnStand.addEventListener('click',btnStand.addEventListener('click', () => dealerTurn());
+btnEndSession.addEventListener('click', () => {
+  if(!gameOver){
+    feedbackDiv.textContent = 'Termina la ronda actual antes de terminar la sesión.';
+    return;
+  }
+  countSection.style.display = 'block';
+  feedbackDiv.textContent = 'Sesión terminada. Ingresa el conteo acumulado final y envíalo.';
+  btnStart.disabled = true;
+  btnHit.disabled = true;
+  btnStand.disabled = true;
+  betInput.disabled = true;
+});
+btnSubmitCount.addEventListener('click', () => {
+  const userCount = parseInt(countInput.value, 10);
+  if(isNaN(userCount)){
+    countFeedback.style.color = 'red';
+    countFeedback.textContent = 'Ingresa un número válido.';
+    return;
+  }
+  if(userCount === runningCount){
+    countFeedback.style.color = 'limegreen';
+    countFeedback.textContent = '¡Correcto! Muy buen conteo.';
+  } else {
+    countFeedback.style.color = 'orange';
+    countFeedback.textContent = `Conteo real: ${runningCount}. Sigue practicando.`;
+  }
+});
