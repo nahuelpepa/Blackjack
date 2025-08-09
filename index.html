@@ -382,6 +382,7 @@
     btnStart.disabled = false;
     betInput.disabled = false;
 
+    feedbackDiv.style.color = 'white';
     feedbackDiv.textContent = outcome;
 
     if(outcome.includes('Ganaste')) {
@@ -402,6 +403,7 @@
   }
   function startRound() {
     if(gameOver === false){
+      feedbackDiv.style.color = 'red';
       feedbackDiv.textContent = 'Termina la ronda actual antes de empezar otra.';
       return;
     }
@@ -500,7 +502,10 @@
 
   btnStart.addEventListener('click', () => startRound());
   btnHit.addEventListener('click', () => playerHit());
-  btnStand.addEventListener('click',btnStand.addEventListener('click', () => dealerTurn());
+  btnStand.addEventListener('click', () => dealerTurn());
+  btnStart.addEventListener('click', () => startRound());
+btnHit.addEventListener('click', () => playerHit());
+btnStand.addEventListener('click', () => dealerTurn());
 btnEndSession.addEventListener('click', () => {
   if(!gameOver){
     feedbackDiv.textContent = 'Termina la ronda actual antes de terminar la sesión.';
@@ -528,3 +533,5 @@ btnSubmitCount.addEventListener('click', () => {
     countFeedback.textContent = `Conteo real: ${runningCount}. Sigue practicando.`;
   }
 });
+})();
+</script>
