@@ -212,25 +212,20 @@
 
 <script>
 (() => {
-  // Variables y configuración de cartas
   const deckRanks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
   const deckSuits = ['♠', '♥', '♦', '♣'];
 
-  // Función valor Hi-Lo para cartas
   function hiLoValue(rank) {
     if(['2','3','4','5','6'].includes(rank)) return 1;
     if(['7','8','9'].includes(rank)) return 0;
     return -1;
   }
-
-  // Valor Blackjack para cartas
   function blackjackValue(rank) {
     if(['J','Q','K'].includes(rank)) return 10;
     if(rank === 'A') return 11;
     return parseInt(rank, 10);
   }
 
-  // Crear baraja completa
   let deck = [];
   function buildDeck() {
     deck = [];
@@ -240,7 +235,6 @@
       }
     }
   }
-  // Barajar baraja
   function shuffleDeck() {
     for(let i = deck.length - 1; i > 0; i--){
       const j = Math.floor(Math.random() * (i + 1));
@@ -248,22 +242,16 @@
     }
   }
 
-  // Variables de estado
   let playerCards = [];
   let dealerCards = [];
-  let runningCount = 0; // Conteo acumulado total toda sesión
+  let runningCount = 0;
   let playerSum = 0;
   let dealerSum = 0;
-  let gameOver = false;
+  let gameOver = true;
   let balance = 1000;
   let round = 0;
   let currentBet = 0;
-  let dealerHoleCard = null; // carta oculta del dealer
 
-  // Historial de rondas
-  const history = [];
-
-  // DOM
   const playerCardsDiv = document.getElementById('playerCards');
   const dealerCardsDiv = document.getElementById('dealerCards');
   const playerSumSpan = document.getElementById('playerSum');
@@ -285,7 +273,6 @@
   const countCurrent = document.getElementById('countCurrent');
   const trainingTip = document.getElementById('trainingTip');
 
-  // Crear visual carta
   function createCardElement(card, faceDown = false) {
     const div = document.createElement('div');
     if(faceDown){
@@ -299,8 +286,6 @@
                      <div class="corner bottom-right">${card.rank}${card.suit}</div>`;
     return div;
   }
-
-  // Calcular suma blackjack mano
   function calculateSum(cards) {
     let sum = 0;
     let aceCount = 0;
@@ -314,20 +299,16 @@
     }
     return sum;
   }
-
-  // Actualizar visual y estados
-  // showDealerSum: si muestra suma total del dealer (revela carta oculta)
   function updateDisplay(showDealerSum = false) {
     playerCardsDiv.innerHTML = '';
     dealerCardsDiv.innerHTML = '';
 
     playerCards.forEach(card => {
-      dealerCardsDiv.style.userSelect = 'none';
       playerCardsDiv.appendChild(createCardElement(card));
     });
     dealerCards.forEach((card, i) => {
       if(i === 1 && !showDealerSum){
-        dealerCardsDiv.appendChild(createCardElement(card, true)); // carta oculta
+        dealerCardsDiv.appendChild(createCardElement(card, true));
       } else {
         dealerCardsDiv.appendChild(createCardElement(card));
       }
@@ -336,14 +317,9 @@
     playerSumSpan.textContent = playerSum;
     dealerSumSpan.textContent = showDealerSum ? dealerSum : '?';
 
-    // Actualizar conteo en pantalla para entrenamiento
     countCurrent.textContent = `Conteo actual: ${runningCount}`;
-
-    // Mostrar tip de entrenamiento según situación
     showTrainingTip();
   }
-
-  // Mostrar consejo o tip según estado actual del juego (modo entrenamiento)
   function showTrainingTip(){
     if(gameOver) {
       trainingTip.textContent = 'Ronda terminada. Puedes empezar una nueva o terminar la sesión.';
@@ -357,53 +333,17 @@
       trainingTip.textContent = 'Tip: Decide con cuidado, evaluar riesgo de pasarte.';
     }
   }
-
-  // Robar carta de la baraja (rebara jar si queda vacía)
   function drawCard() {
     if(deck.length === 0) {
       feedbackDiv.textContent = 'No quedan cartas, se rebaraja automáticamente.';
       buildDeck();
       shuffleDeck();
+      runningCount = 0;
     }
     let card = deck.pop();
     runningCount += hiLoValue(card.rank);
     return card;
   }
-
-  // Guardar historial de la ronda actual
-  function saveRoundHistory(outcome){
-    const roundData = {
-      ronda: round,
-      apuesta: currentBet,
-      resultado: outcome,
-      cartasJugador: playerCards.map(c => c.rank + c.suit).join(', '),
-      cartasBanca: dealerCards.map(c => c.rank + c.suit).join(', '),
-      conteoAlFinal: runningCount,
-      saldo: balance
-    };
-    history.push(roundData);
-    updateHistoryPanel();
-  }
-
-  // Actualizar panel de historial visual
-  function updateHistoryPanel(){
-    if(history.length === 0){
-      historyPanel.style.display = 'none';
-      return;
-    }
-    historyPanel.style.display = 'block';
-    historyContent.innerHTML = '';
-    for(let h of history){
-      const div = document.createElement('div');
-      div.style.marginBottom = '10px';
-      div.innerHTML = `<b>Ronda ${h.ronda}:</b> Apuesta $${h.apuesta} — <i>${h.resultado}</i><br>
-                       Jugador: ${h.cartasJugador} (<b>${calculateSumFromString(h.cartasJugador)}</b>)<br>
-                       Banca: ${h.cartasBanca} (<b>${calculateSumFromString(h.cartasBanca)}</b>)<br>
-                       Conteo acumulado: ${h.conteoAlFinal} — Saldo: $${h.saldo}`;
-      historyContent.appendChild(div);
-    }
-  }
-  // Calcular suma blackjack desde string cartas "2♠, A♦, 10♥"
   function calculateSumFromString(str){
     if(!str) return 0;
     const arr = str.split(',').map(s => s.trim());
@@ -423,8 +363,37 @@
     }
     return sum;
   }
-
-  // Terminar ronda y mostrar resultados
+  let history = [];
+  function saveRoundHistory(outcome){
+    const roundData = {
+      ronda: round,
+      apuesta: currentBet,
+      resultado: outcome,
+      cartasJugador: playerCards.map(c => c.rank + c.suit).join(', '),
+      cartasBanca: dealerCards.map(c => c.rank + c.suit).join(', '),
+      conteoAlFinal: runningCount,
+      saldo: balance
+    };
+    history.push(roundData);
+    updateHistoryPanel();
+  }
+  function updateHistoryPanel(){
+    if(history.length === 0){
+      historyPanel.style.display = 'none';
+      return;
+    }
+    historyPanel.style.display = 'block';
+    historyContent.innerHTML = '';
+    for(let h of history){
+      const div = document.createElement('div');
+      div.style.marginBottom = '10px';
+      div.innerHTML = `<b>Ronda ${h.ronda}:</b> Apuesta $${h.apuesta} — <i>${h.resultado}</i><br>
+                       Jugador: ${h.cartasJugador} (<b>${calculateSumFromString(h.cartasJugador)}</b>)<br>
+                       Banca: ${h.cartasBanca} (<b>${calculateSumFromString(h.cartasBanca)}</b>)<br>
+                       Conteo acumulado: ${h.conteoAlFinal} — Saldo: $${h.saldo}`;
+      historyContent.appendChild(div);
+    }
+  }
   function endGame(outcome) {
     gameOver = true;
     btnHit.disabled = true;
@@ -444,9 +413,12 @@
 
     saveRoundHistory(outcome);
     updateDisplay(true);
-  }
 
-  // Iniciar nueva ronda
+    if(balance <= 0) {
+      feedbackDiv.textContent += ' Te quedaste sin saldo. Termina la sesión o recarga.';
+      btnStart.disabled = true;
+    }
+  }
   function startRound() {
     if(gameOver === false){
       feedbackDiv.textContent = 'Termina la ronda actual antes de empezar otra.';
@@ -476,17 +448,16 @@
     round++;
     playerCards = [];
     dealerCards = [];
-    runningCount = runningCount; // mantenemos conteo de toda la sesión
+    // No resetear runningCount para conservar la sesión
     gameOver = false;
 
-    if(deck.length < 15) { // Si quedan pocas cartas, barajar nueva baraja y resetear conteo
+    if(deck.length < 15) {
       buildDeck();
       shuffleDeck();
-      runningCount = 0; // Resetear conteo por nueva baraja
+      runningCount = 0; // Resetear conteo si se rebaraja
       feedbackDiv.textContent = 'Barajando nueva baraja, conteo reset.';
     }
 
-    // Repartir inicial
     playerCards.push(drawCard());
     dealerCards.push(drawCard());
     playerCards.push(drawCard());
@@ -502,3 +473,25 @@
 
     // Blackjack automático
     if(playerSum === 21 || dealerSum === 21) {
+      revealDealerCards();
+      if(playerSum === 21 && dealerSum !== 21) {
+        endGame('¡Blackjack! Ganaste la ronda.');
+      } else if(dealerSum === 21 && playerSum !== 21) {
+        endGame('La banca tiene blackjack. Perdiste.');
+      } else {
+        endGame('Empate con blackjack.');
+      }
+    }
+  }
+  function revealDealerCards(){
+    dealerSum = calculateSum(dealerCards);
+    updateDisplay(true);
+  }
+  function playerHit() {
+    if(gameOver) return;
+    playerCards.push(drawCard());
+    playerSum = calculateSum(playerCards);
+    updateDisplay(false);
+    if(playerSum > 21) {
+      revealDealerCards();
+      endGame('Te
