@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blackjack Mejorado con Split, Seguro y Estadísticas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+  :root {
+    --bg-main: #1e1e2f;
+    --bg-panel: #2c3e50;
+    --text-main: #f0f0f5;
+    --highlight: #f39c12;
+    --green: #27ae60;
+    --green-hover: #2ecc71;
+    --red: #c0392b;
+    --gray-disabled: #95a5a6;
+    --shadow: rgba(0,0,0,0.7);
+    --btn-split: #8e44ad;
+    --btn-split-hover: #9b59b6;
+    --btn-insurance: #2980b9;
+    --btn-insurance-hover: #3498db;
+  }
+  body {
+    font-family: 'Roboto Mono', monospace, Arial, sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+    background: var(--bg-main);
+    color: var(--text-main);
+    text-align: center;
+    user-select: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  h1 {
+    margin-bottom: 10px;
+    color: var(--highlight);
+    text-shadow: 0 0 8px var(--highlight);
+  }
+  #game {
+    background: var(--bg-panel);
+    border-radius: 12px;
+    padding: 20px 25px 40px;
+    box-shadow: 0 8px 25px var(--shadow);
+  }
+  .hand {
+    margin: 15px 0 0 0;
+  }
+  .hand h3 {
+    margin: 0 0 6px 0;
+    color: #ecf0f1;
+    font-weight: 600;
+  }
+  .cards {
+    font-size: 56px;
+    min-height: 70px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    user-select: none;
+    position: relative;
+  }
+  .card {
+    background: linear-gradient(135deg, #fff 0%, #ddd 100%);
+    border-radius: 8px;
+    width: 48px;
+    height: 70px;
+    color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px 6px;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+    font-weight: 700;
+    font-size: 18px;
+    position: relative;
+    user-select: none;
+    transition: transform 0.3s ease;
+    cursor: default;
+  }
+  .card.red {
+    color: var(--red);
+  }
+  .card .corner {
+    font-size: 14px;
+  }
+  #controls {
+    margin: 20px 0 10px;
+  }
+  button {
+    font-size: 18px;
+    padding: 10px 20px;
+    margin: 0 8px 10px 8px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--green);
+    color: white;
+    box-shadow: 0 5px 10px rgba(39, 174, 96, 0.5);
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  button:disabled {
+    background-color: var(--gray-disabled);
+    box-shadow: none;
+    cursor: default;
+  }
+  button:hover:not(:disabled) {
+    background-color: var(--green-hover);
+  }
+  #btnSplit {
+    background-color: var(--btn-split);
+  }
+  #btnSplit:hover:not(:disabled) {
+    background-color: var(--btn-split-hover);
+  }
+  #btnInsurance {
+    background-color: var(--btn-insurance);
+  }
+  #btnInsurance:hover:not(:disabled) {
+    background-color: var(--btn-insurance-hover);
+  }
+  input[type="number"] {
+    font-size: 18px;
+    width: 100px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  #feedback, #countFeedback, #balanceDisplay, #roundDisplay, #trueCountDisplay, #strategyAdvice {
+    margin-top: 12px;
+    min-height: 28px;
+    font-weight: 600;
+  }
+  #balanceDisplay {
+    font-size: 20px;
+    color: var(--highlight);
+    user-select: none;
+  }
+  #roundDisplay {
+    font-size: 16px;
+    color: #ecf0f1aa;
+    margin-bottom: 8px;
+  }
+  #countSection {
+    margin-top: 20px;
+    border-top: 1px solid #3b5160;
+    padding-top: 18px;
+  }
+  #deckCount {
+    font-weight: 700;
+    color: #f39c12;
+    margin-top: 12px;
+  }
+  /* PANEL LATERAL */
+  #sidePanelToggle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    background: var(--green);
+    border-radius: 8px 0 0 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1000;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    transition: background-color 0.3s ease;
+  }
+  #sidePanelToggle:hover {
+    background: var(--green-hover);
+  }
+  #sidePanel {
+    position: fixed;
+    top: 0;
+    right: -320px;
+    width: 320px;
+    height: 100%;
+    background: var(--bg-panel);
+    box-shadow: -5px 0 15px rgba(0,0,0,0.7);
+    padding: 20px;
+    overflow-y: auto;
+    transition: right 0.3s ease;
+    font-size: 14px;
+    z-index: 999;
+  }
+  #sidePanel.open {
+    right: 0;
+  }
+  #sidePanel h2 {
+    margin-top: 0;
+    color: var(--highlight);
+    text-shadow: 0 0 6px var(--highlight);
+    font-weight: 700;
+    font-size: 22px;
+  }
+  .history-entry {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #3b5160;
+    padding-bottom: 10px;
+  }
+  .history-entry h3 {
+    margin: 0 0 6px 0;
+    font-weight: 600;
+    color: #ecf0f1;
+  }
+  .history-cards {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .history-cards .card {
+    width: 36px;
+    height: 52px;
+    font-size: 14px;
+    padding: 3px 4px;
+  }
+  .history-text {
+    font-weight: 600;
+    color: #ccc;
+  }
+
+  /* BOTONES DOBLAR y RENDIRSE */
+  #btnDouble, #btnSurrender {
+    background-color: #2980b9;
+  }
+  #btnDouble:hover:not(:disabled) {
+    background-color: #3498db;
+  }
+  #btnSurrender {
+    background-color: #e67e22;
+  }
+  #btnSurrender:hover:not(:disabled) {
+    background-color: #d35400;
+  }
+
+  /* BOTÓN SPLIT */
+  #btnSplit {
+    margin-left: 8px;
+  }
+
+  /* BOTÓN INSURANCE */
+  #insuranceSection {
+    margin-top: 12px;
+  }
+
+  /* CARTA DEL DEALER OCULTA */
+  .card.dealer-hidden {
+    background: linear-gradient(135deg, #444 0%, #222 100%);
+    color: transparent;
+    cursor: default;
+    position: relative;
+  }
+  .card.dealer-hidden::after {
+    content: '🂠'; /* Unicode back of card */
+    color: var(--highlight);
+    font-size: 48px;
+    position: absolute;
+    top: 8px;
+    left: 6px;
+  }
+
+  /* ANIMACIONES CARTAS */
+  .cards .card {
+    opacity: 0;
+    transform: translateY(-30px);
+    animation-fill-mode: forwards;
+  }
+  .cards .card.show {
+    opacity: 1;
+    transform: translateY(0);
+    animation-name: slideDown;
+    animation-duration: 0.4s;
+  }
+  @keyframes slideDown {
+    from {opacity: 0; transform: translateY(-30px);}
+    to {opacity: 1; transform: translateY(0);}
+  }
+
+</style>
+</head>
+<body>
+<h1>Blackjack Mejorado</h1>
+
+<div>
+  <label for="initialBalanceInput">Saldo inicial ($): </label><br/>
+  <input type="number" id="initialBalanceInput" min="1" max="100000" value="1000" />
+  <button id="btnSetBalance">Establecer saldo</button>
+</div>
+
+<div id="game" aria-live="polite" aria-atomic="true">
+  <div id="balanceDisplay" aria-label="Saldo actual">Saldo: $1000</div>
+  <div id="roundDisplay" aria-label="Número de ronda">Ronda: 0</div>
+  <div id="deckCount" aria-label="Cartas restantes en el mazo">Cartas restantes: 104</div>
+  <div id="trueCountDisplay" aria-label="Conteo verdadero de cartas">Conteo verdadero: 0</div>
+
+  <div>
+    <label for="betInput">Apuesta esta ronda ($):</label><br/>
+    <input type="number" id="betInput" min="1" max="1000" value="50" />
+  </div>
+
+  <div id="controls" role="group" aria-label="Controles del juego">
+    <button id="btnStart">Empezar ronda</button>
+    <button id="btnHit" disabled>Pedir</button>
+    <button id="btnStand" disabled>Basta</button>
+    <button id="btnDouble" disabled>Doblar apuesta</button>
+    <button id="btnSplit" disabled>Dividir</button>
+    <button id="btnSurrender" disabled>Rendirse</button>
+  </div>
+
+  <div id="insuranceSection" style="display:none;">
+    <button id="btnInsurance">Tomar seguro</button>
+  </div>
+
+  <div class="hand" aria-label="Mano del jugador principal">
+    <h3>Tu mano (<span id="playerSum">0</span>)</h3>
+    <div id="playerCards" class="cards"></div>
+  </div>
+  <div class="hand" id="playerHand2Container" style="display:none;" aria-label="Mano dividida del jugador">
+    <h3>Mano dividida (<span id="player2Sum">0</span>)</h3>
+    <div id="playerCards2" class="cards"></div>
+  </div>
+
+  <div class="hand" aria-label="Mano de la banca">
+    <h3>Mano de la banca (<span id="dealerSum">0</span>)</h3>
+    <div id="dealerCards" class="cards"></div>
+  </div>
+
+  <div id="feedback" aria-live="polite"></div>
+  <div id="strategyAdvice" aria-live="polite" style="color:#f39c12; min-height: 28px; margin-top: 6px; font-weight: 600;"></div>
+
+  <div id="countSection" style="display:none;">
+    <label for="countInput">Ingresa el conteo acumulado Hi-Lo final de toda la sesión:</label><br/>
+    <input type="number" id="countInput" />
+    <button id="btnSubmitCount">Enviar conteo</button>
+    <div id="countFeedback"></div>
+  </div>
+</div>
+
+<!-- Panel lateral toggle -->
+<div id="sidePanelToggle" aria-controls="sidePanel" aria-expanded="false" role="button" tabindex="0">Historial</div>
+<!-- Panel lateral -->
+<div id="sidePanel" aria-label="Historial de cartas y apuestas" tabindex="0">
+  <h2>Historial Rondas y Apuestas</h2>
+  <div id="historyContainer"></div>
+  <hr />
+  <h3>Resumen acumulado</h3>
+  <p id="summaryStats"></p>
+</div>
+
+<!-- Sonidos -->
+<audio id="soundCard" src="https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_hit.ogg" preload="auto"></audio>
+<audio id="soundButton" src="https://actions.google.com/sounds/v1/buttons/button_click.ogg" preload="auto"></audio>
+<audio id="soundWin" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+<audio id="soundLose" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg" preload="auto"></audio>
+<audio id="soundDraw" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+<audio id="soundSplit" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+<audio id="soundInsurance" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+
+<!-- Accesibilidad -->
+<div style="margin-top:20px;">
+  <button id="btnToggleDaltonic" title="Activar/desactivar modo daltónico">Modo Daltónico</button>
+  <button id="btnToggleContrast" title="Alternar alto contraste">Alto Contraste</button>
+  <button id="btnTextSmall" title="Texto pequeño">A-</button>
+  <button id="btnTextNormal" title="Texto normal">A</button>
+  <button id="btnTextLarge" title="Texto grande">A+</button>
+</div>
+
+<script>
+(() => {
+  // --- Variables y constantes ---
+  const deckRanks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const deckSuits = ['♠', '♥', '♦', '♣'];
+  const NUM_DECKS = 2; // Dos mazos para más realismo
+
+  function hiLoValue(rank) {
+    if(['2','3','4','5','6'].includes(rank)) return 1;
+    if(['7','8','9'].includes(rank)) return 0;
+    return -1;
+  }
+  function blackjackValue(rank) {
+    if(['J','Q','K'].includes(rank)) return 10;
+    if(rank === 'A') return 11;
+    return parseInt(rank, 10);
+  }
+
+  // Construcción y manejo del mazo
+  let deck = [];
+  function buildDeck() {
+    deck = [];
+    for(let d=0; d<NUM_DECKS; d++){
+      for(let suit of deckSuits) {
+        for(let rank of deckRanks) {
+          deck.push({rank, suit});
+        }
+      }
+    }
+  }
+  function shuffleDeck() {
+    for(let i = deck.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+  }
+
+  // Estado juego
+  let playerHands = [[]]; // array con las manos del jugador (soporta split)
+  let currentHandIndex = 0; // cuál mano está jugando el jugador
+  let dealerCards = [];
+  let runningCount = 0; // total Hi-Lo acumulado de cartas vistas en sesión
+  let balance = 1000;
+  let round = 0;
+  let currentBet = 0;
+  let bets = [0]; // apuesta por mano (en split)
+  let totalWon = 0;
+  let totalLost = 0;
+  let surrenderUsed = false;
+  let insuranceBet = 0;
+  let insuranceOffered = false;
+  let gameOver = true;
+
+  // Elementos DOM
+  const playerCardsDivs = [document.getElementById('playerCards'), document.getElementById('playerCards2')];
+  const playerSumSpans = [document.getElementById('playerSum'), document.getElementById('player2Sum')];
+  const dealerCardsDiv = document.getElementById('dealerCards');
+  const dealerSumSpan = document.getElementById('dealerSum');
+  const btnHit = document.getElementById('btnHit');
+  const btnStand = document.getElementById('btnStand');
+  const btnStart = document.getElementById('btnStart');
+  const btnDouble = document.getElementById('btnDouble');
+  const btnSplit = document.getElementById('btnSplit');
+  const btnSurrender = document.getElementById('btnSurrender');
+  const feedbackDiv = document.getElementById('feedback');
+  const betInput = document.getElementById('betInput');
+  const balanceDisplay = document.getElementById('balanceDisplay');
+  const roundDisplay = document.getElementById('roundDisplay');
+  const deckCountDisplay = document.getElementById('deckCount');
+  const trueCountDisplay = document.getElementById('trueCountDisplay');
+  const insuranceSection = document.getElementById('insuranceSection');
+  const btnInsurance = document.getElementById('btnInsurance');
+  const countSection = document.getElementById('countSection');
+  const countInput = document.getElementById('countInput');
+  const countFeedback = document.getElementById('countFeedback');
+  const initialBalanceInput = document.getElementById('initialBalanceInput');
+  const btnSetBalance = document.getElementById('btnSetBalance');
+  const playerHand2Container = document.getElementById('playerHand2Container');
+  const strategyAdvice = document.getElementById('strategyAdvice');
+
+  const sidePanelToggle = document.getElementById('sidePanelToggle');
+  const sidePanel = document.getElementById('sidePanel');
+  const historyContainer = document.getElementById('historyContainer');
+  const summaryStats = document.getElementById('summaryStats');
+
+  // Sonidos
+  const soundCard = document.getElementById('soundCard');
+  const soundButton = document.getElementById('soundButton');
+  const soundWin = document.getElementById('soundWin');
+  const soundLose = document.getElementById('soundLose');
+  const soundDraw = document.getElementById('soundDraw');
+  const soundSplit = document.getElementById('soundSplit');
+  const soundInsurance = document.getElementById('soundInsurance');
+
+  // Accesibilidad botones
+  const btnToggleDaltonic = document.getElementById('btnToggleDaltonic');
+  const btnToggleContrast = document.getElementById('btnToggleContrast');
+  const btnTextSmall = document.getElementById('btnTextSmall');
+  const btnTextNormal = document.getElementById('btnTextNormal');
+  const btnTextLarge = document.getElementById('btnTextLarge');
+
+  // Funciones básicas
+
+  function playSound(audioEl) {
+    audioEl.currentTime = 0;
+    audioEl.play();
+  }
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  function updateBalanceDisplay() {
+    balanceDisplay.textContent = `Saldo: $${balance}`;
+  }
+  function updateRoundDisplay() {
+    roundDisplay.textContent = `Ronda: ${round}`;
+  }
+  function updateDeckCountDisplay() {
+    deckCountDisplay.textContent = `Cartas restantes: ${deck.length}`;
+  }
+  function updateTrueCountDisplay() {
+    let decksLeft = deck.length / 52;
+    let trueCount = decksLeft > 0 ? (runningCount / decksLeft).toFixed(2) : runningCount;
+    trueCountDisplay.textContent = `Conteo verdadero: ${trueCount}`;
+  }
+
+  function saveSession() {
+    const session = {
+      balance,
+      round,
+      runningCount,
+      playerHands,
+      currentHandIndex,
+      dealerCards,
+      bets,
+      totalWon,
+      totalLost,
+      surrenderUsed,
+      insuranceBet,
+      insuranceOffered,
+      gameOver
+    };
+    localStorage.setItem('blackjackSession', JSON.stringify(session));
+  }
+  function loadSession() {
+    const sessionStr = localStorage.getItem('blackjackSession');
+    if(sessionStr){
+      const s = JSON.parse(sessionStr);
+      balance = s.balance;
+      round = s.round;
+      runningCount = s.runningCount;
+      playerHands = s.playerHands;
+      currentHandIndex = s.currentHandIndex;
+      dealerCards = s.dealerCards;
+      bets = s.bets;
+      totalWon = s.totalWon;
+      totalLost = s.totalLost;
+      surrenderUsed = s.surrenderUsed;
+      insuranceBet = s.insuranceBet;
+      insuranceOffered = s.insuranceOffered;
+      gameOver = s.gameOver;
+      updateBalanceDisplay();
+      updateRoundDisplay();
+      updateDeckCountDisplay();
+      updateTrueCountDisplay();
+      updateAllHandsUI();
+      feedbackDiv.textContent = gameOver ? "Empieza una nueva ronda." : "Continúa la ronda.";
+      toggleButtons(gameOver ? 'start' : 'inPlay');
+    }
+  }
+
+  // Construye visual cartas en div
+  function createCardDiv(card, hideDealerCard = false) {
+    const div = document.createElement('div');
+    div.classList.add('card');
+    if(card.suit === '♥' || card.suit === '♦') div.classList.add('red');
+    if(hideDealerCard) {
+      div.classList.add('dealer-hidden');
+      return div;
+    }
+    div.innerHTML = `
+      <div class="corner top-left">${card.rank}${card.suit}</div>
+      <div class="corner bottom-right">${card.rank}${card.suit}</div>
+      <div style="font-size:36px; line-height:1; margin-top:5px;">${card.suit}</div>
+    `;
+    return div;
+  }
+
+  // Calcular valor mano y si tiene As adaptable
+  function calculateHandValue(hand) {
+    let sum = 0;
+    let aces = 0;
+    for(let card of hand) {
+      let val = blackjackValue(card.rank);
+      if(card.rank === 'A') aces++;
+      sum += val;
+    }
+    // Ajustar As de 11 a 1 si se pasa de 21
+    while(sum > 21 && aces > 0) {
+      sum -= 10;
+      aces--;
+    }
+    return sum;
+  }
+
+  // Mostrar cartas en UI
+  function updateHandUI(handDiv, hand, hideSecondDealerCard = false) {
+    handDiv.innerHTML = '';
+    hand.forEach((card, i) => {
+      const hideCard = hideSecondDealerCard && i === 1;
+      const cardDiv = createCardDiv(card, hideCard);
+      // animación cartas repartidas
+      setTimeout(() => cardDiv.classList.add('show'), i * 120);
+      handDiv.appendChild(cardDiv);
+    });
+  }
+
+  // Actualiza todas las manos visibles (jugador 1, 2, dealer)
+  function updateAllHandsUI() {
+    updateHandUI(playerCardsDivs[0], playerHands[0]);
+    if(playerHands.length > 1){
+      playerHand2Container.style.display = 'block';
+      updateHandUI(playerCardsDivs[1], playerHands[1]);
+    } else {
+      playerHand2Container.style.display = 'none';
+    }
+    const hideDealerSecondCard = !gameOver;
+    updateHandUI(dealerCardsDiv, dealerCards, hideDealerSecondCard);
+    updatePlayerSums();
+  }
+
+  // Actualiza sumas en UI
+  function updatePlayerSums() {
+    playerSumSpans[0].textContent = calculateHandValue(playerHands[0]);
+    if(playerHands.length > 1){
+      playerSumSpans[1].textContent = calculateHandValue(playerHands[1]);
+    }
+    if(gameOver){
+      dealerSumSpan.textContent = calculateHandValue(dealerCards);
+    } else {
+      // Mostrar suma visible parcial (solo primera carta dealer)
+      if(dealerCards.length > 0){
+        let firstCardVal = blackjackValue(dealerCards[0].rank);
+        if(dealerCards[0].rank === 'A' && calculateHandValue([dealerCards[0]]) === 11) firstCardVal = 11;
+        dealerSumSpan.textContent = firstCardVal;
+      } else {
+        dealerSumSpan.textContent = 0;
+      }
+    }
+  }
+
+  // Verificar Blackjack
+  function isBlackjack(hand) {
+    return hand.length === 2 && calculateHandValue(hand) === 21;
+  }
+
+  // Manejar apuestas y saldo
+  function canPlaceBet(amount){
+    return amount > 0 && amount <= balance;
+  }
+
+  // Mensajes en UI y estrategia básica
+  function showFeedback(msg) {
+    feedbackDiv.textContent = msg;
+  }
+  function showStrategyAdvice(hand, dealerCard) {
+    const playerTotal = calculateHandValue(hand);
+    const dealerUp = blackjackValue(dealerCard.rank);
+
+    // Estrategia básica simplificada para solo pedir o plantarse
+    if(playerTotal >= 17) {
+      strategyAdvice.textContent = "Recomendación: Plantarse";
+    } else if(playerTotal <= 11) {
+      strategyAdvice.textContent = "Recomendación: Pedir carta";
+    } else {
+      if(dealerUp >= 7){
+        strategyAdvice.textContent = "Recomendación: Pedir carta";
+      } else {
+        strategyAdvice.textContent = "Recomendación: Plantarse";
+      }
+    }
+  }
+
+  // Mostrar botones según estado
+  function toggleButtons(state) {
+    // States: start, inPlay, playerTurn, dealerTurn, roundOver
+    switch(state){
+      case 'start':
+        btnStart.disabled = false;
+        btnHit.disabled = true;
+        btnStand.disabled = true;
+        btnDouble.disabled = true;
+        btnSplit.disabled = true;
+        btnSurrender.disabled = true;
+        insuranceSection.style.display = 'none';
+        break;
+      case 'inPlay':
+        btnStart.disabled = true;
+        btnHit.disabled = false;
+        btnStand.disabled = false;
+        btnDouble.disabled = true;
+        btnSplit.disabled = true;
+        btnSurrender.disabled = true;
+        insuranceSection.style.display = 'none';
+        break;
+      case 'playerTurn':
+        btnStart.disabled = true;
+        btnHit.disabled = false;
+        btnStand.disabled = false;
+        btnDouble.disabled = canDouble();
+        btnSplit.disabled = canSplit();
+        btnSurrender.disabled = canSurrender();
+        insuranceSection.style.display = 'none';
+        break;
+      case 'insuranceOffered':
+        btnStart.disabled = true;
+        btnHit.disabled = true;
+        btnStand.disabled = true;
+        btnDouble.disabled = true;
+        btnSplit.disabled = true;
+        btnSurrender.disabled = true;
+        insuranceSection.style.display = 'block';
+        break;
+      case 'roundOver':
+        btnStart.disabled = false;
+        btnHit.disabled = true;
+        btnStand.disabled = true;
+        btnDouble.disabled = true;
+        btnSplit.disabled = true;
+        btnSurrender.disabled = true;
+        insuranceSection.style.display = 'none';
+        break;
+    }
+  }
+
+  // Condiciones acciones especiales
+  function canDouble(){
+    if(playerHands.length === 0) return false;
+    if(currentHandIndex >= playerHands.length) return false;
+    const hand = playerHands[currentHandIndex];
+    return hand.length === 2 && balance >= bets[currentHandIndex];
+  }
+  function canSplit(){
+    if(playerHands.length !== 1) return false; // solo permitido en primera mano
+    const hand = playerHands[0];
+    if(hand.length !== 2) return false;
+    if(hand[0].rank !== hand[1].rank) return false;
+    return balance >= bets[0];
+  }
+  function canSurrender(){
+    if(playerHands.length !== 1) return false; // solo primera mano
+    const hand = playerHands[0];
+    return hand.length === 2 && !surrenderUsed;
+  }
+
+  // Calcular ganador para mano individual
+  function handResult(playerHand, dealerSum) {
+    const playerSum = calculateHandValue(playerHand);
+    if(playerSum > 21) return 'lose';
+    if(dealerSum > 21) return 'win';
+    if(playerSum > dealerSum) return 'win';
+    if(playerSum === dealerSum) return 'draw';
+    return 'lose';
+  }
+
+  // Sumar al contador Hi-Lo las cartas vistas
+  function countCard(card) {
+    runningCount += hiLoValue(card.rank);
+  }
+
+  // Repartir carta con animación y contar
+  async function dealCard(toHand, handIndex = null, isDealer = false) {
+    if(deck.length === 0) {
+      buildDeck();
+      shuffleDeck();
+      showFeedback("Mazo recargado.");
+    }
+    const card = deck.pop();
+    if(isDealer){
+      dealerCards.push(card);
+    } else {
+      playerHands[handIndex].push(card);
+    }
+    countCard(card);
+    updateDeckCountDisplay();
+    updateTrueCountDisplay();
+    updateAllHandsUI();
+    playSound(soundCard);
+    await sleep(350);
+    return card;
+  }
+
+  // Pagar apuestas y actualizar saldo
+  function payOut(result, bet) {
+    if(result === 'win'){
+      balance += bet * 2;
+      totalWon += bet;
+      playSound(soundWin);
+      return `Ganaste $${bet}!`;
+    }
+    if(result === 'draw'){
+      balance += bet;
+      playSound(soundDraw);
+      return `Empate, recuperaste tu apuesta.`;
+    }
+    playSound(soundLose);
+    totalLost += bet;
+    return `Perdiste $${bet}.`;
+  }
+
+  // Lógica ronda
+  async function playDealerTurn() {
+    toggleButtons('dealerTurn');
+    showFeedback("Turno de la banca...");
+    updateAllHandsUI();
+    await sleep(1000);
+
+    // Mostrar carta oculta
+    gameOver = true;
+    updateAllHandsUI();
+    updatePlayerSums();
+
+    // Si dealer tiene blackjack
+    if(isBlackjack(dealerCards)){
+      showFeedback("La banca tiene Blackjack!");
+      await settleRound();
+      return;
+    }
+
+    // Dealer pide hasta 17 o más
+    while(calculateHandValue(dealerCards) < 17){
+      await dealCard(dealerCards, null, true);
+      updatePlayerSums();
+      await sleep(800);
+    }
+
+    await settleRound();
+  }
+
+  // Resolver resultado ronda para todas las manos
+  async function settleRound() {
+    let dealerSum = calculateHandValue(dealerCards);
+    let messages = [];
+    // Resolver seguro
+    if(insuranceOffered){
+      if(isBlackjack(dealerCards)){
+        balance += insuranceBet * 3; // paga 2:1 + devuelve seguro
+        messages.push(`Seguro ganado: $${insuranceBet * 2}`);
+        playSound(soundInsurance);
+      } else {
+        messages.push(`Seguro perdido: $${insuranceBet}`);
+        // seguro se pierde
+      }
+      insuranceBet = 0;
+      insuranceOffered = false;
+    }
+
+    // Resolver manos jugador
+    for(let i=0; i<playerHands.length; i++){
+      let hand = playerHands[i];
+      let bet = bets[i];
+      let result = handResult(hand, dealerSum);
+
+      if(surrenderUsed && i === 0){
+        balance += bet / 2;
+        messages.push(`Te rendiste. Recuperas la mitad: $${bet/2}`);
+        continue;
+      }
+
+      if(isBlackjack(hand) && !isBlackjack(dealerCards)){
+        balance += bet * 2.5;
+        totalWon += bet * 1.5;
+        messages.push(`Blackjack en mano ${i+1}! Ganaste $${bet * 1.5}`);
+        playSound(soundWin);
+        continue;
+      }
+
+      const payoutMessage = payOut(result, bet);
+      messages.push(`Mano ${i+1}: ${payoutMessage}`);
+    }
+    updateBalanceDisplay();
+    showFeedback(messages.join(' | '));
+    strategyAdvice.textContent = "";
+    toggleButtons('roundOver');
+    saveRoundToHistory(messages);
+    saveSession();
+  }
+
+  // Guardar historial
+  let gameHistory = JSON.parse(localStorage.getItem('blackjackHistory') || '[]');
+  function saveRoundToHistory(messages) {
+    let record = {
+      round,
+      playerHands: JSON.parse(JSON.stringify(playerHands)),
+      dealerCards: JSON.parse(JSON.stringify(dealerCards)),
+      bets: [...bets],
+      messages,
+      runningCount,
+      balance
+    };
+    gameHistory.push(record);
+    if(gameHistory.length > 20) gameHistory.shift(); // máximo 20 registros
+    localStorage.setItem('blackjackHistory', JSON.stringify(gameHistory));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    historyContainer.innerHTML = '';
+    gameHistory.forEach(record => {
+      const div = document.createElement('div');
+      div.className = 'history-entry';
+      div.innerHTML = `<h3>Ronda ${record.round}</h3>
+      <div class="history-cards">
+        ${record.playerHands.flatMap(hand => hand.map(c => `<div class="card">${c.rank}${c.suit}</div>`)).join('')}
+        <span style="font-weight:700; margin-left:6px; color:#f39c12;">Dealer:</span>
+        ${record.dealerCards.map(c => `<div class="card">${c.rank}${c.suit}</div>`).join('')}
+      </div>
+      <p class="history-text">Apuestas: ${record.bets.join(', ')} | ${record.messages.join(' | ')} | Saldo: $${record.balance}</p>`;
+      historyContainer.appendChild(div);
+    });
+    renderSummaryStats();
+  }
+
+  function renderSummaryStats() {
+    let wins = 0, losses = 0, draws = 0;
+    gameHistory.forEach(rec => {
+      rec.messages.forEach(m => {
+        if(m.toLowerCase().includes("ganaste")) wins++;
+        else if(m.toLowerCase().includes("perdiste")) losses++;
+        else if(m.toLowerCase().includes("empate")) draws++;
+      });
+    });
+    summaryStats.textContent = `Victorias: ${wins} | Derrotas: ${losses} | Empates: ${draws}`;
+  }
+
+  // Evento toggle panel lateral
+  sidePanelToggle.addEventListener('click', () => {
+    if(sidePanel.classList.contains('open')){
+      sidePanel.classList.remove('open');
+      sidePanelToggle.setAttribute('aria-expanded', 'false');
+    } else {
+      sidePanel.classList.add('open');
+      sidePanelToggle.setAttribute('aria-expanded', 'true');
+    }
+  });
+  sidePanelToggle.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      sidePanelToggle.click();
+    }
+  });
+
+  // Iniciar ronda
+  btnStart.addEventListener('click', async () => {
+    let bet = Number(betInput.value);
+    if(!canPlaceBet(bet)){
+      showFeedback("Apuesta inválida o saldo insuficiente.");
+      return;
+    }
+    gameOver = false;
+    round++;
+    updateRoundDisplay();
+    currentBet = bet;
+    balance -= bet;
+    updateBalanceDisplay();
+    playerHands = [[]];
+    bets = [bet];
+    currentHandIndex = 0;
+    dealerCards = [];
+    surrenderUsed = false;
+    insuranceBet = 0;
+    insuranceOffered = false;
+    insuranceSection.style.display = 'none';
+    playerHand2Container.style.display = 'none';
+
+    showFeedback("Repartiendo cartas...");
+    toggleButtons('inPlay');
+    updateAllHandsUI();
+
+    // Repartir dos cartas jugador y dealer
+    await dealCard(playerHands[0], 0);
+    await dealCard(dealerCards, null, true);
+    await dealCard(playerHands[0], 0);
+    await dealCard(dealerCards, null, true);
+
+    updateAllHandsUI();
+
+    // Ofrecer seguro si dealer tiene A
+    if(dealerCards[0].rank === 'A'){
+      insuranceOffered = true;
+      toggleButtons('insuranceOffered');
+      showFeedback("La banca muestra un As. ¿Deseas seguro?");
+      insuranceSection.style.display = 'block';
+    } else {
+      insuranceOffered = false;
+      insuranceSection.style.display = 'none';
+      // Chequear blackjack inmediato jugador o dealer
+      if(isBlackjack(playerHands[0]) || isBlackjack(dealerCards)){
+        gameOver = true;
+        updateAllHandsUI();
+        await settleRound();
+      } else {
+        toggleButtons('playerTurn');
+        showFeedback("Tu turno: ¿Pedir, Basta, Doblar, Dividir o Rendirse?");
+        showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+      }
+    }
+  });
+
+  // Botón Seguro
+  btnInsurance.addEventListener('click', () => {
+    if(balance >= currentBet / 2){
+      insuranceBet = currentBet / 2;
+      balance -= insuranceBet;
+      updateBalanceDisplay();
+      showFeedback(`Seguro tomado por $${insuranceBet}.`);
+      playSound(soundInsurance);
+      toggleButtons('playerTurn');
+      insuranceSection.style.display = 'none';
+      // Si dealer tiene blackjack, se resolverá automáticamente en settleRound
+    } else {
+      showFeedback("No tienes saldo suficiente para seguro.");
+    }
+  });
+
+  // Pedir carta
+  btnHit.addEventListener('click', async () => {
+    if(gameOver) return;
+    await dealCard(playerHands[currentHandIndex], currentHandIndex);
+    updatePlayerSums();
+    showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+    let val = calculateHandValue(playerHands[currentHandIndex]);
+    if(val > 21){
+      showFeedback(`Te pasaste con ${val}. Mano ${currentHandIndex + 1} pierde.`);
+      if(currentHandIndex + 1 < playerHands.length){
+        currentHandIndex++;
+        showFeedback(`Mano ${currentHandIndex + 1}, es tu turno.`);
+        toggleButtons('playerTurn');
+        showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+      } else {
+        gameOver = true;
+        await playDealerTurn();
+      }
+    }
+  });
+
+  // Plantarse
+  btnStand.addEventListener('click', async () => {
+    if(gameOver) return;
+    if(currentHandIndex + 1 < playerHands.length){
+      currentHandIndex++;
+      showFeedback(`Mano ${currentHandIndex + 1}, es tu turno.`);
+      toggleButtons('playerTurn');
+      showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+    } else {
+      gameOver = true;
+      await playDealerTurn();
+    }
+  });
+
+  // Doblar apuesta
+  btnDouble.addEventListener('click', async () => {
+    if(!canDouble()) return;
+    if(balance < bets[currentHandIndex]){
+      showFeedback("Saldo insuficiente para doblar.");
+      return;
+    }
+    balance -= bets[currentHandIndex];
+    bets[currentHandIndex] *= 2;
+    updateBalanceDisplay();
+    showFeedback("Doblando apuesta y pidiendo una carta...");
+    toggleButtons('playerTurn');
+    await dealCard(playerHands[currentHandIndex], currentHandIndex);
+    updatePlayerSums();
+    let val = calculateHandValue(playerHands[currentHandIndex]);
+    if(val > 21){
+      showFeedback(`Te pasaste con ${val}. Mano ${currentHandIndex + 1} pierde.`);
+    }
+    if(currentHandIndex + 1 < playerHands.length){
+      currentHandIndex++;
+      showFeedback(`Mano ${currentHandIndex + 1}, es tu turno.`);
+      toggleButtons('playerTurn');
+      showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+    } else {
+      gameOver = true;
+      await playDealerTurn();
+    }
+  });
+
+  // Dividir mano
+  btnSplit.addEventListener('click', async () => {
+    if(!canSplit()) return;
+    if(balance < bets[0]){
+      showFeedback("Saldo insuficiente para dividir.");
+      return;
+    }
+    playSound(soundSplit);
+    balance -= bets[0];
+    updateBalanceDisplay();
+
+    // Separar cartas en dos manos distintas
+    const firstCard = playerHands[0][0];
+    const secondCard = playerHands[0][1];
+    playerHands = [[firstCard], [secondCard]];
+    bets = [bets[0], bets[0]];
+    currentHandIndex = 0;
+
+    playerHand2Container.style.display = 'block';
+    showFeedback("Mano dividida. Jugando primera mano...");
+    updateAllHandsUI();
+    toggleButtons('playerTurn');
+
+    // Repartir una carta a cada mano
+    await dealCard(playerHands[0], 0);
+    await dealCard(playerHands[1], 1);
+    updatePlayerSums();
+    showStrategyAdvice(playerHands[currentHandIndex], dealerCards[0]);
+  });
+
+  // Rendirse
+  btnSurrender.addEventListener('click', () => {
+    if(!canSurrender()) return;
+    surrenderUsed = true;
+    gameOver = true;
+    showFeedback("Te rendiste. Pierdes la mitad de tu apuesta.");
+    balance += bets[currentHandIndex] / 2;
+    updateBalanceDisplay();
+    toggleButtons('roundOver');
+    saveRoundToHistory(["Jugador se rindió."]);
+    saveSession();
+  });
+
+  // Ajustar saldo inicial
+  btnSetBalance.addEventListener('click', () => {
+    let val = Number(initialBalanceInput.value);
+    if(val >= 1 && val <= 100000){
+      balance = val;
+      updateBalanceDisplay();
+      round = 0;
+      updateRoundDisplay();
+      gameOver = true;
+      toggleButtons('start');
+      showFeedback("Saldo inicial ajustado. Empieza una nueva ronda.");
+      saveSession();
+    } else {
+      alert("Introduce un saldo válido (1 - 100000)");
+    }
+  });
+
+  // Guardar conteo acumulado sesión al terminar
+  btnSubmitCount.addEventListener('click', () => {
+    let val = Number(countInput.value);
+    if(!isNaN(val)){
+      runningCount = val;
+      updateTrueCountDisplay();
+      countFeedback.textContent = "Conteo guardado.";
+      saveSession();
+    } else {
+      countFeedback.textContent = "Entrada inválida.";
+    }
+  });
+
+  // Cargar sesión al iniciar
+  window.addEventListener('load', () => {
+    buildDeck();
+    shuffleDeck();
+    updateDeckCountDisplay();
+    updateTrueCountDisplay();
+    updateBalanceDisplay();
+    updateRoundDisplay();
+    toggleButtons('start');
+    renderHistory();
+    loadSession();
+  });
+
+  // Accesibilidad botones
+  btnToggleDaltonic.addEventListener('click', () => {
+    document.body.classList.toggle('daltonic');
+  });
+  btnToggleContrast.addEventListener('click', () => {
+    document.body.classList.toggle('highContrast');
+  });
+  btnTextSmall.addEventListener('click', () => {
+    document.body.style.fontSize = '12px';
+  });
+  btnTextNormal.addEventListener('click', () => {
+    document.body.style.fontSize = '16px';
+  });
+  btnTextLarge.addEventListener('click', () => {
+    document.body.style.fontSize = '20px';
+  });
+
+})();
+</script>
+</body>
+</html>
