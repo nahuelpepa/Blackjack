@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blackjack + Contar Cartas Hi-Lo Mejorado</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+
+  :root {
+    --bg-main: #1e1e2f;
+    --bg-panel: #2c3e50;
+    --text-main: #f0f0f5;
+    --highlight: #f39c12;
+    --green: #27ae60;
+    --green-hover: #2ecc71;
+    --red: #c0392b;
+    --gray-disabled: #95a5a6;
+    --shadow: rgba(0,0,0,0.7);
+  }
+
+  body {
+    font-family: 'Roboto Mono', monospace, Arial, sans-serif;
+    max-width: 540px;
+    margin: 20px auto;
+    background: var(--bg-main);
+    color: var(--text-main);
+    text-align: center;
+    user-select: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    padding: 0 10px;
+  }
+  h1 {
+    margin-bottom: 10px;
+    color: var(--highlight);
+    text-shadow: 0 0 8px var(--highlight);
+  }
+
+  #game {
+    background: var(--bg-panel);
+    border-radius: 12px;
+    padding: 20px 25px 40px;
+    box-shadow: 0 8px 25px var(--shadow);
+  }
+
+  .hand {
+    margin: 15px 0 0 0;
+  }
+  .hand h3 {
+    margin: 0 0 6px 0;
+    color: #ecf0f1;
+    font-weight: 600;
+  }
+
+  .cards {
+    font-size: 56px;
+    min-height: 70px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    user-select: none;
+    position: relative;
+    perspective: 1000px; /* para animación 3D */
+  }
+
+  .card {
+    width: 60px;
+    height: 86px;
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    user-select: none;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+    cursor: default;
+    background-color: white;
+  }
+  .card.red {
+    color: var(--red);
+  }
+  .card img {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    backface-visibility: hidden;
+    user-select: none;
+  }
+
+  /* Animación repartir */
+  .animate-deal {
+    animation: dealAnimation 0.5s ease forwards;
+  }
+  @keyframes dealAnimation {
+    0% {
+      transform: translateY(-100px) rotateY(90deg);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0) rotateY(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* Carta tapada dorso */
+  .card.backface {
+    background: linear-gradient(135deg, #111 0%, #222 100%);
+    border: 2px solid #444;
+    box-shadow: inset 0 0 12px #000;
+    cursor: default;
+    user-select: none;
+  }
+  .card.backface svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 52px;
+  }
+
+  #controls {
+    margin: 20px 0 10px;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 10px 20px;
+    margin: 0 10px 10px 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--green);
+    color: white;
+    box-shadow: 0 5px 10px rgba(39, 174, 96, 0.5);
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+  button:disabled {
+    background-color: var(--gray-disabled);
+    box-shadow: none;
+    cursor: default;
+  }
+  button:hover:not(:disabled) {
+    background-color: var(--green-hover);
+  }
+  input[type="number"] {
+    font-size: 18px;
+    width: 100px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  #feedback, #countFeedback, #balanceDisplay, #roundDisplay, #runningCountDisplay, #trueCountDisplay {
+    margin-top: 12px;
+    min-height: 28px;
+    font-weight: 600;
+  }
+  #balanceDisplay {
+    font-size: 20px;
+    color: var(--highlight);
+    user-select: none;
+  }
+  #roundDisplay {
+    font-size: 16px;
+    color: #ecf0f1aa;
+    margin-bottom: 8px;
+  }
+  #countSection {
+    margin-top: 20px;
+    border-top: 1px solid #3b5160;
+    padding-top: 18px;
+  }
+
+  /* PANEL LATERAL */
+  #sidePanelToggle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    background: var(--green);
+    border-radius: 8px 0 0 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1000;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    transition: background-color 0.3s ease;
+  }
+  #sidePanelToggle:hover {
+    background: var(--green-hover);
+  }
+  #sidePanel {
+    position: fixed;
+    top: 0;
+    right: -360px;
+    width: 360px;
+    height: 100%;
+    background: var(--bg-panel);
+    box-shadow: -5px 0 15px rgba(0,0,0,0.7);
+    padding: 20px;
+    overflow-y: auto;
+    transition: right 0.3s ease;
+    font-size: 14px;
+    z-index: 999;
+  }
+  #sidePanel.open {
+    right: 0;
+  }
+  #sidePanel h2 {
+    margin-top: 0;
+    color: var(--highlight);
+    text-shadow: 0 0 6px var(--highlight);
+    font-weight: 700;
+    font-size: 22px;
+  }
+  .history-entry {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #3b5160;
+    padding-bottom: 10px;
+  }
+  .history-entry h3 {
+    margin: 0 0 6px 0;
+    font-weight: 600;
+    color: #ecf0f1;
+  }
+  .history-cards {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .history-cards .card {
+    width: 36px;
+    height: 52px;
+    font-size: 14px;
+    padding: 3px 4px;
+  }
+  .history-text {
+    font-weight: 600;
+    color: #ccc;
+  }
+
+  /* BOTONES DOBLAR y RENDIRSE */
+  #btnDouble, #btnSurrender {
+    background-color: #2980b9;
+  }
+  #btnDouble:hover:not(:disabled) {
+    background-color: #3498db;
+  }
+  #btnSurrender {
+    background-color: #e67e22;
+  }
+  #btnSurrender:hover:not(:disabled) {
+    background-color: #d35400;
+  }
+
+  /* MODO DALTÓNICO */
+  body.daltonic {
+    --bg-main: #2b2b2b;
+    --bg-panel: #3a3a3a;
+    --text-main: #f0f0f0;
+    --highlight: #f39c12;
+    --green: #117a65;
+    --green-hover: #16a085;
+    --red: #922b21;
+    --gray-disabled: #7f8c8d;
+    --shadow: rgba(0,0,0,0.8);
+  }
+  body.daltonic .card.red {
+    color: #0000ff; /* Azules para rojo */
+  }
+  /* ALTO CONTRASTE */
+  body.highcontrast {
+    background-color: black !important;
+    color: yellow !important;
+  }
+  body.highcontrast #game {
+    background-color: black !important;
+    color: yellow !important;
+  }
+  body.highcontrast button {
+    background-color: yellow !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  body.highcontrast input[type="number"] {
+    background-color: black !important;
+    color: yellow !important;
+    border: 2px solid yellow !important;
+  }
+  /* AJUSTE TAMAÑO */
+  body.small-text {
+    font-size: 12px;
+  }
+  body.large-text {
+    font-size: 22px;
+  }
+
+  /* Responsive móvil */
+  @media(max-width: 600px) {
+    body {
+      max-width: 100%;
+      padding: 10px;
+    }
+    .cards {
+      font-size: 40px;
+      gap: 8px;
+    }
+    .card {
+      width: 45px;
+      height: 65px;
+    }
+    #sidePanel {
+      width: 280px;
+      right: -280px;
+    }
+  }
+
+  /* Gráficos simples para resumen */
+  #graphWins, #graphLosses {
+    height: 80px;
+    margin: 10px 0;
+  }
+</style>
+</head>
+<body>
+<h1>Blackjack + Contar Cartas Hi-Lo Mejorado</h1>
+
+<div>
+  <label for="initialBalanceInput">Saldo inicial ($): </label><br/>
+  <input type="number" id="initialBalanceInput" min="1" max="100000" value="1000" />
+  <button id="btnSetBalance">Establecer saldo</button>
+</div>
+
+<div id="game">
+  <div id="balanceDisplay">Saldo: $1000</div>
+  <div id="roundDisplay">Ronda: 0</div>
+
+  <div>
+    <label for="betInput">Apuesta esta ronda ($):</label><br/>
+    <input type="number" id="betInput" min="1" max="1000" value="50" />
+  </div>
+
+  <div id="controls">
+    <button id="btnStart">Empezar ronda</button>
+    <button id="btnHit" disabled>Pedir</button>
+    <button id="btnStand" disabled>Basta</button>
+    <button id="btnDouble" disabled>Doblar apuesta</button>
+    <button id="btnSurrender" disabled>Rendirse</button>
+    <button id="btnEndSession" style="background:#c0392b;">Terminar sesión</button>
+  </div>
+
+  <div class="hand">
+    <h3>Tu mano (<span id="playerSum">0</span>)</h3>
+    <div id="playerCards" class="cards"></div>
+  </div>
+
+  <div class="hand">
+    <h3>Mano de la banca (<span id="dealerSum">0</span>)</h3>
+    <div id="dealerCards" class="cards"></div>
+  </div>
+
+  <div id="feedback"></div>
+
+  <!-- Contadores Running y True count -->
+  <div style="margin-top: 15px;">
+    <div id="runningCountDisplay">Conteo Running Hi-Lo: 0</div>
+    <div id="trueCountDisplay">True Count (ajustado): 0.00</div>
+  </div>
+
+  <div id="countSection" style="display:none;">
+    <label for="countInput">Ingresa el conteo acumulado Hi-Lo final de toda la sesión:</label><br/>
+    <input type="number" id="countInput" />
+    <button id="btnSubmitCount">Enviar conteo</button>
+    <div id="countFeedback"></div>
+  </div>
+</div>
+
+<!-- Panel lateral toggle -->
+<div id="sidePanelToggle" title="Mostrar historial y estadísticas">Historial</div>
+<!-- Panel lateral -->
+<div id="sidePanel" aria-label="Historial de cartas y apuestas">
+  <h2>Historial Rondas y Apuestas</h2>
+  <div id="historyContainer"></div>
+  <hr />
+  <h3>Resumen acumulado</h3>
+  <p id="summaryStats"></p>
+
+  <h3>Gráfico de ganancias y pérdidas (rondas)</h3>
+  <canvas id="graphWins" width="320" height="80"></canvas>
+  <canvas id="graphLosses" width="320" height="80"></canvas>
+</div>
+
+<!-- Sonidos -->
+<audio id="soundCard" src="https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_hit.ogg" preload="auto"></audio>
+<audio id="soundButton" src="https://actions.google.com/sounds/v1/buttons/button_click.ogg" preload="auto"></audio>
+
+<!-- Accesibilidad -->
+<div style="margin-top:20px;">
+  <button id="btnToggleDaltonic" title="Activar/desactivar modo daltónico">Modo Daltónico</button>
+  <button id="btnToggleContrast" title="Alternar alto contraste">Alto Contraste</button>
+  <button id="btnTextSmall" title="Texto pequeño">A-</button>
+  <button id="btnTextNormal" title="Texto normal">A</button>
+  <button id="btnTextLarge" title="Texto grande">A+</button>
+</div>
+
+<script>
+(() => {
+  // --- Variables y estados ---
+  const deckRanks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const deckSuits = ['♠', '♥', '♦', '♣'];
+  const redSuits = ['♥', '♦'];
+
+  // Para true count: 2 mazos (52 x 2 cartas)
+  const totalDecks = 2;
+  const cardsPerDeck = 52;
+  let cardsUsedInDecks = 0;
+
+  // Estado juego
+  let deck = [];
+  let playerCards = [];
+  let dealerCards = [];
+  let runningCount = 0;
+  let balance = 1000;
+  let round = 0;
+  let currentBet = 0;
+  let gameOver = true;
+  let totalWon = 0;
+  let totalLost = 0;
+
+  // Historial y estadísticas
+  let roundsHistory = []; // {round, playerCards, dealerCards, runningCountAfter, bet, result, resultType}
+
+  // Elementos DOM
+  const playerCardsDiv = document.getElementById('playerCards');
+  const dealerCardsDiv = document.getElementById('dealerCards');
+  const playerSumSpan = document.getElementById('playerSum');
+  const dealerSumSpan = document.getElementById('dealerSum');
+  const btnHit = document.getElementById('btnHit');
+  const btnStand = document.getElementById('btnStand');
+  const btnStart = document.getElementById('btnStart');
+  const btnEndSession = document.getElementById('btnEndSession');
+  const btnDouble = document.getElementById('btnDouble');
+  const btnSurrender = document.getElementById('btnSurrender');
+  const feedbackDiv = document.getElementById('feedback');
+  const countInput = document.getElementById('countInput');
+  const btnSubmitCount = document.getElementById('btnSubmitCount');
+  const countFeedback = document.getElementById('countFeedback');
+  const balanceDisplay = document.getElementById('balanceDisplay');
+  const roundDisplay = document.getElementById('roundDisplay');
+  const betInput = document.getElementById('betInput');
+  const countSection = document.getElementById('countSection');
+  const initialBalanceInput = document.getElementById('initialBalanceInput');
+  const btnSetBalance = document.getElementById('btnSetBalance');
+  const sidePanelToggle = document.getElementById('sidePanelToggle');
+  const sidePanel = document.getElementById('sidePanel');
+  const historyContainer = document.getElementById('historyContainer');
+  const summaryStats = document.getElementById('summaryStats');
+  const runningCountDisplay = document.getElementById('runningCountDisplay');
+  const trueCountDisplay = document.getElementById('trueCountDisplay');
+  const soundCard = document.getElementById('soundCard');
+  const soundButton = document.getElementById('soundButton');
+
+  // Accesibilidad botones
+  const btnToggleDaltonic = document.getElementById('btnToggleDaltonic');
+  const btnToggleContrast = document.getElementById('btnToggleContrast');
+  const btnTextSmall = document.getElementById('btnTextSmall');
+  const btnTextNormal = document.getElementById('btnTextNormal');
+  const btnTextLarge = document.getElementById('btnTextLarge');
+
+  // Canvas gráficos
+  const graphWinsCanvas = document.getElementById('graphWins');
+  const graphLossesCanvas = document.getElementById('graphLosses');
+  const ctxWins = graphWinsCanvas.getContext('2d');
+  const ctxLosses = graphLossesCanvas.getContext('2d');
+
+  // Estados para permitir acciones (doblar y rendirse solo en primera mano)
+  let canDouble = true;
+  let canSurrender = true;
+
+  // --- Funciones ---
+
+
+  // Crear deck mezclado con 2 mazos
+  function createDeck() {
+    const newDeck = [];
+    for(let deckIndex = 0; deckIndex < totalDecks; deckIndex++) {
+      for(const rank of deckRanks) {
+        for(const suit of deckSuits) {
+          newDeck.push({rank, suit});
+        }
+      }
+    }
+    return shuffle(newDeck);
+  }
+
+  // Shuffle: Durstenfeld shuffle
+  function shuffle(array) {
+    let currentIndex = array.length, temporaryValue, randomIndex;
+    while(currentIndex !== 0) {
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+    return array;
+  }
+
+  // Valor carta para blackjack
+  function cardValue(card) {
+    if(['J','Q','K'].includes(card.rank)) return 10;
+    if(card.rank === 'A') return 11; // se ajusta después
+    return Number(card.rank);
+  }
+
+  // Valor para Hi-Lo count
+  // 2-6 = +1, 7-9=0, 10,A = -1
+  function cardCountValue(card) {
+    if(['2','3','4','5','6'].includes(card.rank)) return 1;
+    if(['7','8','9'].includes(card.rank)) return 0;
+    return -1;
+  }
+
+  // Suma mano con ajuste de ases
+  function handSum(hand) {
+    let sum = 0;
+    let aceCount = 0;
+    for(const card of hand) {
+      sum += cardValue(card);
+      if(card.rank === 'A') aceCount++;
+    }
+    while(sum > 21 && aceCount > 0) {
+      sum -= 10;
+      aceCount--;
+    }
+    return sum;
+  }
+
+  // Generar imagen SVG base64 para cartas
+  function cardToBase64SVG(card) {
+    const color = redSuits.includes(card.suit) ? 'red' : 'black';
+    const rank = card.rank === '10' ? '10' : card.rank;
+    // Simplificado y estilizado SVG de carta (mejorable)
+    const svg = `<svg width="60" height="86" xmlns="http://www.w3.org/2000/svg">
+      <rect width="60" height="86" fill="white" stroke="black" stroke-width="1" rx="10" ry="10"/>
+      <text x="6" y="18" font-family="monospace" font-size="18" fill="${color}" font-weight="700">${rank}</text>
+      <text x="6" y="76" font-family="monospace" font-size="18" fill="${color}" font-weight="700" transform="rotate(180 20,80)">${rank}</text>
+      <text x="30" y="45" font-family="Arial" font-size="36" fill="${color}" text-anchor="middle" dominant-baseline="middle">${card.suit}</text>
+    </svg>`;
+    return 'data:image/svg+xml;base64,' + btoa(svg);
+  }
+
+  // Mostrar cartas en un div
+  // Si hideSecondDealerCard true oculta la segunda carta del dealer con dorso
+  function showCards(handDiv, hand, hideSecondDealerCard = false) {
+    handDiv.innerHTML = '';
+    hand.forEach((card, i) => {
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'card';
+      if(hideSecondDealerCard && i === 1) {
+        cardDiv.classList.add('backface');
+        cardDiv.innerHTML = `
+          <svg viewBox="0 0 60 86" xmlns="http://www.w3.org/2000/svg" aria-label="Carta tapada">
+            <rect width="60" height="86" fill="#111"/>
+            <circle cx="30" cy="43" r="18" stroke="#444" stroke-width="3" fill="none"/>
+            <circle cx="30" cy="43" r="10" stroke="#666" stroke-width="2" fill="none"/>
+            <line x1="15" y1="20" x2="45" y2="66" stroke="#333" stroke-width="1"/>
+            <line x1="45" y1="20" x2="15" y2="66" stroke="#333" stroke-width="1"/>
+          </svg>`;
+      } else {
+        cardDiv.classList.toggle('red', redSuits.includes(card.suit));
+        const img = document.createElement('img');
+        img.src = cardToBase64SVG(card);
+        img.alt = `${card.rank} de ${card.suit}`;
+        cardDiv.appendChild(img);
+      }
+      cardDiv.classList.add('animate-deal');
+      cardDiv.style.animationDelay = (i * 150) + 'ms';
+      handDiv.appendChild(cardDiv);
+    });
+  }
+
+  // Actualizar suma visibles en UI
+  function updateSums() {
+    playerSumSpan.textContent = handSum(playerCards);
+    // Para dealer, si ocultamos la 2da carta, solo sumar 1ra carta
+    let dealerSum = 0;
+    if(!gameOver) {
+      // Mostrar suma visible solo de la 1ra carta si oculta
+      dealerSum = cardValue(dealerCards[0]);
+    } else {
+      dealerSum = handSum(dealerCards);
+    }
+    dealerSumSpan.textContent = dealerSum;
+  }
+
+  // Repartir carta y actualizar conteo
+  function dealCard(toPlayer = true) {
+    if(deck.length === 0) {
+      feedback('Se terminó la baraja, se mezclará de nuevo.', 'orange');
+      deck = createDeck();
+      cardsUsedInDecks = 0;
+      runningCount = 0;
+    }
+    const card = deck.pop();
+    cardsUsedInDecks++;
+
+    // Actualizar running count
+    runningCount += cardCountValue(card);
+    updateCountUI();
+
+    if(toPlayer) {
+      playerCards.push(card);
+    } else {
+      dealerCards.push(card);
+    }
+
+    playSound('card');
+  }
+
+  // Mostrar feedback mensajes
+  function feedback(msg, color = 'white') {
+    feedbackDiv.style.color = color;
+    feedbackDiv.textContent = msg;
+  }
+
+  // Actualizar balance
+  function updateBalanceDisplay() {
+    balanceDisplay.textContent = `Saldo: $${balance.toFixed(2)}`;
+  }
+
+  // Actualizar ronda
+  function updateRoundDisplay() {
+    roundDisplay.textContent = `Ronda: ${round}`;
+  }
+
+  // Actualizar conteo running y true count en UI
+  function updateCountUI() {
+    runningCountDisplay.textContent = `Conteo Running Hi-Lo: ${runningCount}`;
+    // Cálculo true count = runningCount / decksLeft
+    const decksUsed = cardsUsedInDecks / cardsPerDeck;
+    const decksLeft = Math.max(totalDecks - decksUsed, 0.25); // mínimo 0.25 para evitar división 0
+    const trueCount = runningCount / decksLeft;
+    trueCountDisplay.textContent = `True Count (ajustado): ${trueCount.toFixed(2)}`;
+  }
+
+  // Comprobar blackjack
+  function isBlackjack(hand) {
+    return hand.length === 2 && handSum(hand) === 21;
+  }
+
+  // Comprobar bust (pasarse)
+  function isBust(hand) {
+    return handSum(hand) > 21;
+  }
+
+  // Botones habilitados o no
+  function setButtons(enabled = false) {
+    btnHit.disabled = !enabled;
+    btnStand.disabled = !enabled;
+    btnDouble.disabled = !enabled || !canDouble;
+    btnSurrender.disabled = !enabled || !canSurrender;
+    btnStart.disabled = enabled;
+  }
+
+  // Resetea manos y variables para ronda nueva
+  function resetHands() {
+    playerCards = [];
+    dealerCards = [];
+    gameOver = false;
+    canDouble = true;
+    canSurrender = true;
+    feedback('');
+  }
+
+  // Iniciar ronda
+  async function startRound() {
+    const bet = Number(betInput.value);
+    if(isNaN(bet) || bet < 1 || bet > balance) {
+      feedback('Apuesta inválida o mayor que saldo.', 'red');
+      return;
+    }
+    currentBet = bet;
+    balance -= bet;
+    updateBalanceDisplay();
+
+    round++;
+    updateRoundDisplay();
+
+    resetHands();
+    deck = deck.length > 0 ? deck : createDeck();
+
+    // Repartir dos cartas jugador y dealer con delay animado
+    await dealAndShow(true);
+    await dealAndShow(false);
+    await dealAndShow(true);
+    await dealAndShow(false);
+
+    updateSums();
+    showCards(playerCardsDiv, playerCards, false);
+    showCards(dealerCardsDiv, dealerCards, true);
+
+    // Comprobar blackjack jugador o dealer
+    const playerBJ = isBlackjack(playerCards);
+    const dealerBJ = isBlackjack(dealerCards);
+
+    if(playerBJ || dealerBJ) {
+      endRound();
+      return;
+    }
+
+    setButtons(true);
+  }
+
+  // Función auxiliar animada repartir carta con delay para más realismo
+  async function dealAndShow(toPlayer) {
+    dealCard(toPlayer);
+    showCards(toPlayer ? playerCardsDiv : dealerCardsDiv, toPlayer ? playerCards : dealerCards, toPlayer ? false : !gameOver);
+    updateSums();
+    await sleep(350);
+  }
+
+  // Promesa delay
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Cuando jugador pide carta
+  async function hit() {
+    if(gameOver) return;
+    canDouble = false;
+    canSurrender = false;
+
+    dealCard(true);
+    showCards(playerCardsDiv, playerCards, false);
+    updateSums();
+
+    if(isBust(playerCards)) {
+      feedback('Te pasaste. Perdiste la ronda.', 'red');
+      endRound(false);
+      return;
+    }
+  }
+
+  // Cuando jugador basta
+  async function stand() {
+    if(gameOver) return;
+    setButtons(false);
+
+    // Revelar segunda carta dealer y sumar cartas dealer hasta 17 o más
+    showCards(dealerCardsDiv, dealerCards, false);
+    updateSums();
+
+    while(handSum(dealerCards) < 17) {
+      await sleep(600);
+      dealCard(false);
+      showCards(dealerCardsDiv, dealerCards, false);
+      updateSums();
+    }
+
+    // Evaluar resultado
+    const playerSum = handSum(playerCards);
+    const dealerSum = handSum(dealerCards);
+
+    if(isBust(dealerCards)) {
+      feedback('La banca se pasó. Ganaste la ronda!', 'green');
+      balance += currentBet * 2;
+      totalWon += currentBet;
+      endRound(true);
+      return;
+    }
+
+    if(playerSum > dealerSum) {
+      feedback('Ganaste la ronda!', 'green');
+      balance += currentBet * 2;
+      totalWon += currentBet;
+      endRound(true);
+    } else if(playerSum === dealerSum) {
+      feedback('Empate. Recuperas tu apuesta.');
+      balance += currentBet;
+      endRound(null);
+    } else {
+      feedback('Perdiste la ronda.', 'red');
+      totalLost += currentBet;
+      endRound(false);
+    }
+  }
+
+  // Doblar apuesta
+  async function doubleBet() {
+    if(gameOver || !canDouble) return;
+    if(balance < currentBet) {
+      feedback('Saldo insuficiente para doblar.', 'red');
+      return;
+    }
+    balance -= currentBet;
+    currentBet *= 2;
+    updateBalanceDisplay();
+    canDouble = false;
+    canSurrender = false;
+    setButtons(false);
+
+    // Repartir una carta más y pasar al dealer
+    dealCard(true);
+    showCards(playerCardsDiv, playerCards, false);
+    updateSums();
+
+    if(isBust(playerCards)) {
+      feedback('Te pasaste. Perdiste la ronda.', 'red');
+      endRound(false);
+      return;
+    }
+
+    await stand();
+  }
+
+  // Rendirse (pierdes la mitad de la apuesta)
+  function surrender() {
+    if(gameOver || !canSurrender) return;
+    feedback('Te rendiste. Pierdes la mitad de la apuesta.', 'orange');
+    balance += currentBet / 2;
+    totalLost += currentBet / 2;
+    endRound(false);
+  }
+
+  // Terminar ronda y actualizar historial
+  function endRound(win = null) {
+    gameOver = true;
+    setButtons(false);
+    showCards(dealerCardsDiv, dealerCards, false);
+    updateSums();
+
+    // Actualizar saldo en pantalla
+    updateBalanceDisplay();
+
+    // Registrar resultado en historial
+    let resultText = '';
+    if(win === true) resultText = 'Ganó jugador';
+    else if(win === false) resultText = 'Ganó banca';
+    else resultText = 'Empate';
+
+    roundsHistory.push({
+      round,
+      playerCards: [...playerCards],
+      dealerCards: [...dealerCards],
+      runningCountAfter: runningCount,
+      bet: currentBet,
+      result: win,
+      resultText,
+    });
+
+    updateHistory();
+    updateSummaryStats();
+    updateGraphs();
+
+    // Mostrar la sección para ingresar conteo acumulado
+    countSection.style.display = 'block';
+  }
+
+  // Actualizar historial en panel lateral
+  function updateHistory() {
+    historyContainer.innerHTML = '';
+    roundsHistory.slice().reverse().forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'history-entry';
+
+      const playerCardsHtml = entry.playerCards.map(c => cardShortText(c)).join(' ');
+      const dealerCardsHtml = entry.dealerCards.map(c => cardShortText(c)).join(' ');
+
+      div.innerHTML = `
+        <h3>Ronda ${entry.round} - ${entry.resultText}</h3>
+        <div class="history-cards">
+          <div><strong>Jugador:</strong> ${playerCardsHtml}</div>
+        </div>
+        <div class="history-cards">
+          <div><strong>Banca:</strong> ${dealerCardsHtml}</div>
+        </div>
+        <div class="history-text">Apuesta: $${entry.bet.toFixed(2)} - Conteo Running: ${entry.runningCountAfter}</div>
+      `;
+      historyContainer.appendChild(div);
+    });
+  }
+
+  // Actualizar resumen y estadísticas
+  function updateSummaryStats() {
+    const totalRounds = roundsHistory.length;
+    const wins = roundsHistory.filter(r => r.result === true).length;
+    const losses = roundsHistory.filter(r => r.result === false).length;
+    const draws = roundsHistory.filter(r => r.result === null).length;
+    summaryStats.textContent = `Rondas jugadas: ${totalRounds} | Ganadas: ${wins} | Perdidas: ${losses} | Empates: ${draws} | Ganancia neta: $${(totalWon - totalLost).toFixed(2)}`;
+  }
+
+  // Dibujar gráficos básicos de ganancias y pérdidas
+  function updateGraphs() {
+    const w = graphWinsCanvas.width;
+    const h = graphWinsCanvas.height;
+
+    // Gráfico ganancias
+    ctxWins.clearRect(0, 0, w, h);
+    ctxWins.fillStyle = 'limegreen';
+    let winsData = roundsHistory.map(r => (r.result === true ? r.bet : 0));
+    drawGraph(ctxWins, winsData);
+
+    // Gráfico pérdidas
+    ctxLosses.clearRect(0, 0, w, h);
+    ctxLosses.fillStyle = 'tomato';
+    let lossesData = roundsHistory.map(r => (r.result === false ? r.bet : 0));
+    drawGraph(ctxLosses, lossesData);
+  }
+
+  // Dibuja barras simples en gráfico
+  function drawGraph(ctx, data) {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+    if(data.length === 0) return;
+
+    const barWidth = w / data.length;
+    const maxVal = Math.max(...data, 1);
+    for(let i = 0; i < data.length; i++) {
+      const barHeight = (data[i]/maxVal) * h;
+      ctx.fillRect(i * barWidth, h - barHeight, barWidth - 2, barHeight);
+    }
+  }
+
+  // Texto corto de carta para historial
+  function cardShortText(card) {
+    return `${card.rank}${card.suit}`;
+  }
+
+  // Sonidos
+  function playSound(type) {
+    if(type === 'card') {
+      soundCard.currentTime = 0;
+      soundCard.play();
+    } else if(type === 'button') {
+      soundButton.currentTime = 0;
+      soundButton.play();
+    }
+  }
+
+  // Terminar sesión (reset)
+  function endSession() {
+    if(confirm('¿Querés terminar la sesión y resetear todo?')) {
+      balance = Number(initialBalanceInput.value) || 1000;
+      round = 0;
+      runningCount = 0;
+      cardsUsedInDecks = 0;
+      deck = [];
+      playerCards = [];
+      dealerCards = [];
+      roundsHistory = [];
+      currentBet = 0;
+      gameOver = true;
+      updateBalanceDisplay();
+      updateRoundDisplay();
+      updateCountUI();
+      updateHistory();
+      updateSummaryStats();
+      updateGraphs();
+      feedback('');
+      setButtons(false);
+      countSection.style.display = 'none';
+      playSound('button');
+    }
+  }
+
+  // Botones accesibilidad
+  btnToggleDaltonic.addEventListener('click', () => {
+    document.body.classList.toggle('daltonic');
+    playSound('button');
+  });
+  btnToggleContrast.addEventListener('click', () => {
+    document.body.classList.toggle('highcontrast');
+    playSound('button');
+  });
+  btnTextSmall.addEventListener('click', () => {
+    document.body.classList.remove('large-text');
+    document.body.classList.add('small-text');
+    playSound('button');
+  });
+  btnTextNormal.addEventListener('click', () => {
+    document.body.classList.remove('small-text', 'large-text');
+    playSound('button');
+  });
+  btnTextLarge.addEventListener('click', () => {
+    document.body.classList.remove('small-text');
+    document.body.classList.add('large-text');
+    playSound('button');
+  });
+
+  // Eventos botones juego
+  btnStart.addEventListener('click', () => {
+    if(balance <= 0) {
+      feedback('Saldo insuficiente para apostar. Termina sesión o recarga.', 'red');
+      return;
+    }
+    playSound('button');
+    startRound();
+  });
+  btnHit.addEventListener('click', () => {
+    playSound('button');
+    hit();
+  });
+  btnStand.addEventListener('click', () => {
+    playSound('button');
+    stand();
+  });
+  btnDouble.addEventListener('click', () => {
+    playSound('button');
+    doubleBet();
+  });
+  btnSurrender.addEventListener('click', () => {
+    playSound('button');
+    surrender();
+  });
+  btnEndSession.addEventListener('click', () => {
+    endSession();
+  });
+  btnSetBalance.addEventListener('click', () => {
+    let val = Number(initialBalanceInput.value);
+    if(val < 1) {
+      alert('Debe ingresar un saldo inicial válido mayor que cero.');
+      return;
+    }
+    balance = val;
+    updateBalanceDisplay();
+    playSound('button');
+  });
+
+  // Panel lateral toggle
+  sidePanelToggle.addEventListener('click', () => {
+    sidePanel.classList.toggle('open');
+    playSound('button');
+  });
+
+  // Enviar conteo acumulado (solo para mostrar)
+  btnSubmitCount.addEventListener('click', () => {
+    const val = Number(countInput.value);
+    if(isNaN(val)) {
+      countFeedback.textContent = 'Ingrese un número válido.';
+      countFeedback.style.color = 'red';
+      return;
+    }
+    countFeedback.style.color = 'limegreen';
+    countFeedback.textContent = `Conteo acumulado registrado: ${val}`;
+    playSound('button');
+  });
+
+  // Inicializar UI al cargar
+  function init() {
+    deck = createDeck();
+    updateBalanceDisplay();
+    updateRoundDisplay();
+    updateCountUI();
+    setButtons(false);
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
